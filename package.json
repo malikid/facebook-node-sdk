@@ -23,7 +23,7 @@
   "devDependencies": {
     "nock": "~0.17.2",
     "mocha": "~1.9.0",
-    "should": "~1.2.2"
+    "should": "~6.0.3"
   },
   "optionalDependencies": {},
   "main": "./fb.js",
