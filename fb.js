@@ -9,6 +9,7 @@
             , pingFacebook
             , api
             , napi
+            , paged
             , nodeifyCallback
             , graph
             , rest
@@ -135,6 +136,143 @@
                 graph.apply(this, arguments);
             } else {
                 rest.apply(this, arguments);
+            }
+        };
+
+        /**
+         *
+         * @access public
+         * @param path {String} the url path
+         * @param method {String} the http method (default: `"GET"`)
+         * @param params {Object} the parameters for the query
+         * @param cb {Function} the first callback function to handle the response
+         * @param cb {Function} the last callback function to handle the response
+         */
+        /**
+         *
+         * Make a api call to Paged server.
+         *
+         * Except the path, the first callback and the last callback,
+         * all arguments to this function are optional. So any of these are valid:
+         *
+         *  FB.api('/platform/posts'); // throw away the response
+         *  FB.api('/platform/posts', function(r) { console.log(r) }); // only get the first response
+         *  FB.api('/platform/posts', function(r) { console.log(r) }, function(r) {console.log(r)});
+         *  FB.api('/platform/posts', { fields: 'email' }); // throw away response
+         *  FB.api('/platform/posts', { fields: 'email' }, function(r) { console.log(r) }); // only get the first response
+         *  FB.api('/platform/posts', { fields: 'email' }, function(r) { console.log(r) }, function(r) {console.log(r)});
+         *
+         */
+        paged = function() {
+
+            var   params
+                , pagedData = []
+                , pagedBefore
+                , lastCallback
+                , firstCallback;
+
+            params = setParams(arguments);
+            callApi.apply(null, params);
+
+
+
+            function setParams(params) {
+
+                var argumentsLength = arguments.length;
+
+                if(isFunction(arguments[argumentsLength - 1])) {
+                    lastCallback = Array.prototype.pop.call(arguments);
+                    if(isFunction(arguments[argumentsLength - 2])) {
+                      firstCallback = Array.prototype.pop.call(arguments);
+                    } else {
+                      firstCallback = function() {};
+                    }
+                } else {
+                    lastCallback = function() {};
+                    firstCallback = function() {};
+                }
+
+                Array.prototype.push.call(params, apiFirstCallback);
+                return params;
+            }
+
+            function callApi() {
+
+                if(typeof arguments[0] === 'string') {
+                    graph.apply(this, arguments);
+                } else {
+                    rest.apply(this, arguments);
+                }
+            }
+
+            function callNextApi(paging) {
+
+                var regex = /https:\/\/graph.facebook.com[:[\d]+]?[\/v[\d.]+]?\//;
+                var param = paging.next.split(regex)[1];
+                
+                callApi(param, apiPagedCallback);
+            }
+
+            function apiFirstCallback(result) {
+
+                firstCallback(result);
+
+                if(isError(result)) {
+                    lastCallback({error: result.error});
+                    return;
+                }
+
+                var paging = result.paging;
+                if(haveNextPage(paging)) {
+                    pagedBefore = paging.cursors.before;
+                    callNextApi(paging);
+                    return;
+                }
+
+                lastCallback(null);
+                return;
+            }
+
+            function apiPagedCallback(result) {
+
+              if(isError(result)) {
+                  lastCallback({error: result.error});
+                  return;
+              }
+
+              pagedData.push.apply(pagedData, result.data);
+
+              var paging = result.paging;
+
+              if(haveNextPage(paging)) {
+                  callNextApi(paging);
+                  return;
+              }
+
+              var pagedResponse = {
+                  data: pagedData,
+                  paging: {
+                      cursors: {
+                          before: pagedBefore,
+                          after: paging.cursors.after
+                      }
+                  }
+              };
+
+              lastCallback(pagedResponse);
+              return
+            }
+
+            function isError(result) {
+                return result.error?true:false;
+            };
+
+            function haveNextPage(paging) {
+                return (paging && paging.next)?true:false;
+            };
+
+            function isFunction(param) {
+                return (typeof param === "function");
             }
         };
 
@@ -665,6 +803,7 @@
         return {
               api: api
             , napi: napi // this method does not exist in fb js sdk
+            , paged: paged
             , getAccessToken: getAccessToken
             , setAccessToken: setAccessToken // this method does not exist in fb js sdk
             , parseSignedRequest : parseSignedRequest // this method does not exist in fb js sdk
