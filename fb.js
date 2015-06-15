@@ -178,14 +178,14 @@
 
             function setParams(params) {
 
-                var argumentsLength = arguments.length;
+                var paramsLength = params.length;
 
-                if(isFunction(arguments[argumentsLength - 1])) {
-                    lastCallback = Array.prototype.pop.call(arguments);
-                    if(isFunction(arguments[argumentsLength - 2])) {
-                      firstCallback = Array.prototype.pop.call(arguments);
+                if(isFunction(params[paramsLength - 1])) {
+                    lastCallback = Array.prototype.pop.call(params);
+                    if(isFunction(params[paramsLength - 2])) {
+                        firstCallback = Array.prototype.pop.call(params);
                     } else {
-                      firstCallback = function() {};
+                        firstCallback = function() {};
                     }
                 } else {
                     lastCallback = function() {};
@@ -193,6 +193,7 @@
                 }
 
                 Array.prototype.push.call(params, apiFirstCallback);
+
                 return params;
             }
 
@@ -218,7 +219,7 @@
                 firstCallback(result);
 
                 if(isError(result)) {
-                    lastCallback({error: result.error});
+                    lastCallback(null);
                     return;
                 }
 
