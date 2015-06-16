@@ -68,8 +68,9 @@ describe('Get by paged, ', function () {
             nock('https://graph.facebook.com:443')
             .get('/data')
             .reply(200, function(uri, requestBody) {
+
                 var response = {
-                    data: fakeData.slice(0,50),
+                    data: fakeData.slice(0, 50),
                     paging: {
                         cursors: {
                             before: "0",
@@ -81,65 +82,35 @@ describe('Get by paged, ', function () {
                 return response;
             })
 
-            // .filteringPath(/after=[\d]+/g, 'after=XXX')
             .get('/data?after=50')
             .reply(200, function(uri, requestBody) {
-                var number = parseInt(uri.replace("/data?after=", ""));
-                var data, after, next;
-
-                if(DATA_NUMBER - number > 50) {
-                    data = fakeData.slice(number, number + 50);
-                    after = number + 50;
-                    next = "https://graph.facebook.com:443/data?after=" + after;
-                } else {
-                    data = fakeData.slice(number);
-                    after = DATA_NUMBER
-                }
 
                 var response = {
-                    data: data,
+                    data: fakeData.slice(50, 100),
                     paging: {
                         cursors: {
-                            before: "" + number,
-                            after: "" + after
-                        }
+                            before: "50",
+                            after: "100"
+                        },
+                        next: "https://graph.facebook.com:443/data?after=100"
                     }
                 };
-
-                if(next) {
-                    response.paging.next = next;
-                }
 
                 return response;
             })
 
             .get('/data?after=100')
             .reply(200, function(uri, requestBody) {
-                var number = parseInt(uri.replace("/data?after=", ""));
-                var data, after, next;
-
-                if(DATA_NUMBER - number > 50) {
-                    data = fakeData.slice(number, number + 50);
-                    after = number + 50;
-                    next = "https://graph.facebook.com:443/data?after=" + after;
-                } else {
-                    data = fakeData.slice(number);
-                    after = DATA_NUMBER;
-                }
 
                 var response = {
-                    data: data,
+                    data: fakeData.slice(100),
                     paging: {
                         cursors: {
-                            before: "" + number,
-                            after: "" + after
+                            before: "100",
+                            after: "125"
                         }
                     }
                 };
-
-                if(next) {
-                    response.paging.next = next;
-                }
 
                 return response;
             });
@@ -160,6 +131,66 @@ describe('Get by paged, ', function () {
                 result.should.have.properties("data", "paging");
                 result.data.length.should.equal(75);
                 result.paging.should.have.property("cursors");
+                result.paging.cursors.should.have.properties("before", "after");
+                done();
+                return;
+            });
+        });
+    });
+
+    describe("data more than 50 (=> 75) without last callback.", function(done) {
+
+        before(function (done) {
+
+            var fakeData = [];
+            var DATA_NUMBER = 75;
+
+            for(var i = 0; i < DATA_NUMBER; i++) {
+                fakeData.push(Math.floor((Math.random() * 10) + 1));
+            }
+
+            nock('https://graph.facebook.com:443')
+            .get('/data')
+            .reply(200, function(uri, requestBody) {
+                var response = {
+                    data: fakeData.slice(0,50),
+                    paging: {
+                        cursors: {
+                            before: "0",
+                            after: "50"
+                        },
+                        next: "https://graph.facebook.com:443/data?after=50"
+                    }
+                };
+                return response;
+            })
+
+            .get('/data?after=50')
+            .reply(200, function(uri, requestBody) {
+
+                var response = {
+                    data: fakeData.slice(50),
+                    paging: {
+                        cursors: {
+                            before: "50",
+                            after: DATA_NUMBER
+                        }
+                    }
+                };
+
+                return response;
+            });
+
+            done();
+            return;
+        });
+
+        it('query "data" should have 50 + 75 pieces of data', function (done) {
+            FB.paged('data', function (result) {
+                result.should.be.Object;
+                result.should.have.properties("data", "paging");
+                result.data.length.should.equal(50);
+                result.paging.should.have.properties("cursors", "next");
                 result.paging.cursors.should.have.properties("before", "after");
                 done();
                 return;
