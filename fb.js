@@ -150,7 +150,7 @@
          */
         /**
          *
-         * Make a api call to Paged server.
+         * Make a api call to Paged server (Cursor-based Pagination).
          *
          * Except the path, the first callback and the last callback,
          * all arguments to this function are optional. So any of these are valid:
@@ -161,6 +161,9 @@
          *  FB.api('/platform/posts', { fields: 'email' }); // throw away response
          *  FB.api('/platform/posts', { fields: 'email' }, function(r) { console.log(r) }); // only get the first response
          *  FB.api('/platform/posts', { fields: 'email' }, function(r) { console.log(r) }, function(r) {console.log(r)});
+         *
+         * Reference
+         * https://developers.facebook.com/docs/graph-api/using-graph-api/v2.3#paging
          *
          */
         paged = function() {
@@ -181,11 +184,12 @@
                 var paramsLength = params.length;
 
                 if(isFunction(params[paramsLength - 1])) {
-                    lastCallback = Array.prototype.pop.call(params);
                     if(isFunction(params[paramsLength - 2])) {
+                        lastCallback = Array.prototype.pop.call(params);
                         firstCallback = Array.prototype.pop.call(params);
                     } else {
-                        firstCallback = function() {};
+                        firstCallback = Array.prototype.pop.call(params);
+                        lastCallback = function() {};
                     }
                 } else {
                     lastCallback = function() {};
